@@ -9,7 +9,7 @@ services:
       MYSQL_ROOT_PASSWORD: library_root_password
       MYSQL_DATABASE: LibraryManagementSystem
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
