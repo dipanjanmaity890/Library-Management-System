@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://library-backend-1023917364005.us-central1.run.app/api';
 
 // Navigation Logic
 document.querySelectorAll('.nav-links li').forEach(item => {
