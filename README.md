@@ -14,28 +14,34 @@ A full-stack, premium Library Management System built with Node.js, Express, MyS
 - **Backend**: Node.js, Express.js
 - **Database**: MySQL
 
-## Local Development Setup
+## Local Development Setup (Docker)
 
-### 1. Database Setup
-1. Ensure MySQL is running on your computer.
-2. Run the `schema.sql` file in your MySQL environment to create the `LibraryManagementSystem` database and all required tables.
-3. Run the `operations.sql` file to seed the database with initial sample data.
+The absolute easiest way to run this project is using Docker. It automatically builds the database, imports the tables and dummy data, and starts the Node.js server.
 
-### 2. Backend Setup
-1. Navigate to the root directory where `package.json` is located.
-2. Run `npm install` to install the backend dependencies.
-3. Create a file named `.env` in the root directory (do not commit this file). Add your database credentials:
-   ```env
-   DB_HOST=localhost
-   DB_USER=your_mysql_username
-   DB_PASSWORD=your_mysql_password
-   DB_NAME=LibraryManagementSystem
-   PORT=3000
+### 1. Start the Environment
+1. Ensure [Docker](https://www.docker.com/) is installed and running on your computer.
+2. Open a terminal in the root directory of this project.
+3. Run the following command:
+   ```bash
+   docker-compose up --build
    ```
-4. Start the server by running `node backend/server.js`.
+4. Docker will download MySQL, run the initialization scripts (`init-scripts/`), and launch the Node API on port `3000`.
 
-### 3. Frontend Setup
-1. Simply open `frontend/index.html` in your favorite web browser. No frontend build step is required!
+### 2. Connect via TablePlus
+If you want to view the database visually:
+- **Host**: `127.0.0.1`
+- **Port**: `3306`
+- **User**: `root`
+- **Password**: `library_root_password`
+- **Database**: `LibraryManagementSystem`
+
+### 3. Open the Frontend
+1. Simply open `frontend/index.html` in your favorite web browser.
+2. If you face CORS issues (due to `file://` protocol restrictions in some browsers), run a local server:
+   ```bash
+   npx serve frontend -p 8080
+   ```
+   and visit `http://localhost:8080`.
 
 ## Deployment Guide
 
