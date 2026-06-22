@@ -123,12 +123,22 @@ app.get('/api/fines', (req, res) => {
 // Create Endpoints
 app.post('/api/books', async (req, res) => {
   try {
-      const { title, author, price, available_copies, pub_id, category_id } = req.body;
+      const { title, author_id, price, available_copies, pub_id, category_id } = req.body;
       const newId = await generateId('Books', 'book_id');
-      const query = 'INSERT INTO Books (book_id, title, author, price, available_copies, pub_id, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
-      db.query(query, [newId, title, author, price, available_copies, pub_id, category_id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Book added successfully', id: newId });
+      
+      db.query('SELECT author_name FROM Author WHERE author_id = ?', [author_id], (err, authorResults) => {
+          if (err || authorResults.length === 0) return res.status(400).json({ error: 'Author not found' });
+          const author_name = authorResults[0].author_name;
+          
+          const query = 'INSERT INTO Books (book_id, title, author, price, available_copies, pub_id, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
+          db.query(query, [newId, title, author_name, price, available_copies, pub_id, category_id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            db.query('INSERT INTO Book_Author (book_id, author_id) VALUES (?, ?)', [newId, author_id], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ message: 'Book added successfully', id: newId });
+            });
+          });
       });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
