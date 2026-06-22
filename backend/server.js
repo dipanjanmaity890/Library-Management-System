@@ -72,7 +72,8 @@ app.get('/api/members', (req, res) => {
 app.get('/api/borrows', (req, res) => {
   const query = `
     SELECT br.borrow_id, m.name AS member_name, b.title AS book_title, 
-           br.issue_date, br.due_date, br.return_date, l.librarian_name
+           br.issue_date, br.due_date, br.return_date, l.librarian_name,
+           (SELECT COUNT(*) FROM Fine f WHERE f.borrow_id = br.borrow_id) > 0 AS has_fine
     FROM Borrows br
     JOIN Member m ON br.memb_id = m.memb_id
     JOIN Books b ON br.book_id = b.book_id
