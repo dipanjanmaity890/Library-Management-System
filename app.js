@@ -217,7 +217,7 @@ async function fetchFinesGrid() {
 function openModal(modalId) {
     document.getElementById(modalId).classList.add('active');
     if(modalId === 'book-modal') {
-        fetchPublishersForSelect(); fetchCategoriesForSelect();
+        fetchPublishersForSelect(); fetchCategoriesForSelect(); fetchAuthorsForSelect();
     } else if(modalId === 'borrow-modal') {
         fetchMembersForSelect(); fetchAvailableBooksForSelect(); fetchLibrariansForSelect();
     }
@@ -248,6 +248,15 @@ async function fetchCategoriesForSelect() {
         const select = document.getElementById('book-category');
         select.innerHTML = '<option value="">Select...</option>';
         data.forEach(cat => select.innerHTML += `<option value="${cat.category_id}">${cat.category_name}</option>`);
+    } catch (err) { console.error(err); }
+}
+async function fetchAuthorsForSelect() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/authors`);
+        const data = await res.json();
+        const select = document.getElementById('book-author');
+        select.innerHTML = '<option value="">Select...</option>';
+        data.forEach(a => select.innerHTML += `<option value="${a.author_id}">${a.author_name}</option>`);
     } catch (err) { console.error(err); }
 }
 async function fetchMembersForSelect() {
@@ -297,7 +306,7 @@ async function handleFormSubmit(e, endpoint, payload, modalId, refreshFunc) {
 }
 
 document.getElementById('add-book-form').addEventListener('submit', (e) => handleFormSubmit(e, 'books', {
-    title: document.getElementById('book-title').value, author: document.getElementById('book-author').value,
+    title: document.getElementById('book-title').value, author_id: document.getElementById('book-author').value,
     price: document.getElementById('book-price').value, available_copies: document.getElementById('book-copies').value,
     pub_id: document.getElementById('book-publisher').value, category_id: document.getElementById('book-category').value
 }, 'book-modal', () => { fetchBooks(); fetchDashboardData(); }));
