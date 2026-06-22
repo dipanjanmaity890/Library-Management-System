@@ -3,69 +3,76 @@ const API_BASE_URL = 'https://library-backend-1023917364005.us-central1.run.app/
 // Navigation Logic
 document.querySelectorAll('.nav-links li').forEach(item => {
     item.addEventListener('click', (e) => {
-        // Remove active class from all links
         document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
-        // Add active class to clicked
         e.target.classList.add('active');
         
-        // Hide all sections
         document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
         
-        // Show target section
         const target = e.target.getAttribute('data-target');
         document.getElementById(target).classList.add('active');
 
-        // Fetch data if needed
-        if(target === 'books') fetchBooks();
-        if(target === 'members') fetchMembers();
-        if(target === 'borrows') fetchBorrows();
         if(target === 'dashboard') fetchDashboardData();
+        else if(target === 'books') fetchBooks();
+        else if(target === 'members') fetchMembers();
+        else if(target === 'borrows') fetchBorrows();
+        else if(target === 'publishers') fetchPublishersGrid();
+        else if(target === 'categories') fetchCategoriesGrid();
+        else if(target === 'authors') fetchAuthorsGrid();
+        else if(target === 'librarians') fetchLibrariansGrid();
+        else if(target === 'fines') fetchFinesGrid();
     });
 });
 
-// Format Date helper
 const formatDate = (dateString) => {
     if (!dateString) return 'Not Returned';
     return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-// Fetch Dashboard Data
+// Check DB Connection Status
+async function checkConnectionStatus() {
+    const badge = document.getElementById('db-status');
+    try {
+        const res = await fetch(`${API_BASE_URL}/status`);
+        const data = await res.json();
+        if (data.status === 'connected') {
+            badge.textContent = 'DB Connected';
+            badge.className = 'db-status connected';
+        } else {
+            badge.textContent = 'DB Offline';
+            badge.className = 'db-status disconnected';
+        }
+    } catch (error) {
+        badge.textContent = 'Server Offline';
+        badge.className = 'db-status disconnected';
+    }
+}
+checkConnectionStatus();
+fetchDashboardData();
+setInterval(checkConnectionStatus, 10000);
+
 async function fetchDashboardData() {
     try {
         const [booksRes, membersRes, borrowsRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/books`),
-            fetch(`${API_BASE_URL}/members`),
-            fetch(`${API_BASE_URL}/borrows`)
+            fetch(`${API_BASE_URL}/books`), fetch(`${API_BASE_URL}/members`), fetch(`${API_BASE_URL}/borrows`)
         ]);
-
         const books = await booksRes.json();
         const members = await membersRes.json();
         const borrows = await borrowsRes.json();
 
         document.getElementById('total-books').textContent = books.length || 0;
         document.getElementById('total-members').textContent = members.length || 0;
-        
-        const activeBorrows = borrows.filter(b => b.return_date === null).length;
-        document.getElementById('active-borrows').textContent = activeBorrows || 0;
-
-    } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-    }
+        document.getElementById('active-borrows').textContent = borrows.filter(b => b.return_date === null).length || 0;
+    } catch (error) { console.error(error); }
 }
 
-// Fetch Books
+// --- Fetching Logic for Grids ---
 async function fetchBooks() {
     try {
         const res = await fetch(`${API_BASE_URL}/books`);
         const books = await res.json();
         const tbody = document.querySelector('#books-table tbody');
         tbody.innerHTML = '';
-
         books.forEach(book => {
-            const isAvailable = book.available_copies > 0;
-            const statusClass = isAvailable ? 'available' : 'borrowed';
-            const statusText = isAvailable ? 'Available' : 'Out of Stock';
-            
             tbody.innerHTML += `
                 <tr>
                     <td>#${book.book_id}</td>
@@ -74,23 +81,19 @@ async function fetchBooks() {
                     <td>${book.category || 'N/A'}</td>
                     <td>${book.available_copies}</td>
                     <td>${book.publisher}</td>
-                    <td><button class="btn-danger" style="padding: 0.3rem 0.6rem;" onclick="deleteBook(${book.book_id})">Delete</button></td>
+                    <td><button class="btn-danger" style="padding:0.3rem 0.6rem;" onclick="deleteRecord('books', ${book.book_id}, fetchBooks)">Delete</button></td>
                 </tr>
             `;
         });
-    } catch (error) {
-        console.error("Error fetching books:", error);
-    }
+    } catch (error) { console.error(error); }
 }
 
-// Fetch Members
 async function fetchMembers() {
     try {
         const res = await fetch(`${API_BASE_URL}/members`);
         const members = await res.json();
         const tbody = document.querySelector('#members-table tbody');
         tbody.innerHTML = '';
-
         members.forEach(member => {
             tbody.innerHTML += `
                 <tr>
@@ -98,28 +101,23 @@ async function fetchMembers() {
                     <td><strong>${member.name}</strong></td>
                     <td>${member.memb_type}</td>
                     <td>${member.email || 'N/A'}</td>
-                    <td><button class="btn-danger" style="padding: 0.3rem 0.6rem;" onclick="deleteMember(${member.memb_id})">Delete</button></td>
+                    <td><button class="btn-danger" style="padding:0.3rem 0.6rem;" onclick="deleteRecord('members', ${member.memb_id}, fetchMembers)">Delete</button></td>
                 </tr>
             `;
         });
-    } catch (error) {
-        console.error("Error fetching members:", error);
-    }
+    } catch (error) { console.error(error); }
 }
 
-// Fetch Borrows
 async function fetchBorrows() {
     try {
         const res = await fetch(`${API_BASE_URL}/borrows`);
         const borrows = await res.json();
         const tbody = document.querySelector('#borrows-table tbody');
         tbody.innerHTML = '';
-
         borrows.forEach(borrow => {
             const isReturned = borrow.return_date !== null;
             const statusClass = isReturned ? 'available' : 'borrowed';
             const statusText = isReturned ? 'Returned' : 'Active';
-
             tbody.innerHTML += `
                 <tr>
                     <td>#${borrow.borrow_id}</td>
@@ -129,58 +127,99 @@ async function fetchBorrows() {
                     <td>${borrow.librarian_name || 'N/A'}</td>
                     <td><span class="status ${statusClass}">${statusText}</span></td>
                     <td>
-                        ${isReturned ? '<span style="color:var(--text-secondary)">-</span>' : `<button class="btn-success" style="padding: 0.3rem 0.6rem;" onclick="returnBook(${borrow.borrow_id}, ${borrow.book_id})">Mark Returned</button>`}
+                        ${isReturned ? '<span style="color:var(--text-secondary)">-</span>' : `<button class="btn-success" style="padding:0.3rem 0.6rem;" onclick="returnBook(${borrow.borrow_id}, ${borrow.book_id})">Mark Returned</button>`}
                     </td>
                 </tr>
             `;
         });
-    } catch (error) {
-        console.error("Error fetching borrows:", error);
-    }
+    } catch (error) { console.error(error); }
 }
 
-// Check DB Connection Status
-async function checkConnectionStatus() {
-    const badge = document.getElementById('db-status');
+async function fetchPublishersGrid() {
     try {
-        const res = await fetch(`${API_BASE_URL}/status`);
+        const res = await fetch(`${API_BASE_URL}/publishers`);
         const data = await res.json();
-        
-        if (data.status === 'connected') {
-            badge.textContent = 'DB Connected';
-            badge.className = 'db-status connected';
-        } else {
-            badge.textContent = 'DB Offline';
-            badge.className = 'db-status disconnected';
-            badge.title = data.error || 'Connection error';
-        }
-    } catch (error) {
-        badge.textContent = 'Server Offline';
-        badge.className = 'db-status disconnected';
-        badge.title = 'Cannot connect to server';
-    }
+        const tbody = document.querySelector('#publishers-table tbody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            tbody.innerHTML += `<tr>
+                <td>#${item.pub_id}</td><td><strong>${item.pub_name}</strong></td><td>${item.address || ''}</td>
+                <td><button class="btn-danger" style="padding:0.3rem 0.6rem;" onclick="deleteRecord('publishers', ${item.pub_id}, fetchPublishersGrid)">Delete</button></td>
+            </tr>`;
+        });
+    } catch (error) { console.error(error); }
 }
 
-// Initial Fetch for Dashboard & Status
-checkConnectionStatus();
-fetchDashboardData();
+async function fetchCategoriesGrid() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/categories`);
+        const data = await res.json();
+        const tbody = document.querySelector('#categories-table tbody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            tbody.innerHTML += `<tr>
+                <td>#${item.category_id}</td><td><strong>${item.category_name}</strong></td>
+                <td><button class="btn-danger" style="padding:0.3rem 0.6rem;" onclick="deleteRecord('categories', ${item.category_id}, fetchCategoriesGrid)">Delete</button></td>
+            </tr>`;
+        });
+    } catch (error) { console.error(error); }
+}
 
-// Periodically check status every 10 seconds
-setInterval(checkConnectionStatus, 10000);
+async function fetchAuthorsGrid() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/authors`);
+        const data = await res.json();
+        const tbody = document.querySelector('#authors-table tbody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            tbody.innerHTML += `<tr>
+                <td>#${item.author_id}</td><td><strong>${item.author_name}</strong></td><td>${item.country || ''}</td>
+                <td><button class="btn-danger" style="padding:0.3rem 0.6rem;" onclick="deleteRecord('authors', ${item.author_id}, fetchAuthorsGrid)">Delete</button></td>
+            </tr>`;
+        });
+    } catch (error) { console.error(error); }
+}
 
-// --- Modal & Form Logic ---
+async function fetchLibrariansGrid() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/librarians`);
+        const data = await res.json();
+        const tbody = document.querySelector('#librarians-table tbody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            tbody.innerHTML += `<tr>
+                <td>#${item.librarian_id}</td><td><strong>${item.librarian_name}</strong></td><td>${item.email}</td><td>${item.phone || ''}</td>
+                <td><button class="btn-danger" style="padding:0.3rem 0.6rem;" onclick="deleteRecord('librarians', ${item.librarian_id}, fetchLibrariansGrid)">Delete</button></td>
+            </tr>`;
+        });
+    } catch (error) { console.error(error); }
+}
 
+async function fetchFinesGrid() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/fines`);
+        const data = await res.json();
+        const tbody = document.querySelector('#fines-table tbody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            const statusClass = item.status === 'Paid' ? 'available' : 'borrowed';
+            tbody.innerHTML += `<tr>
+                <td>#${item.fine_id}</td><td>Borrow #${item.borrow_id}</td><td>$${item.amount}</td>
+                <td><span class="status ${statusClass}">${item.status}</span></td>
+                <td><button class="btn-danger" style="padding:0.3rem 0.6rem;" onclick="deleteRecord('fines', ${item.fine_id}, fetchFinesGrid)">Delete</button></td>
+            </tr>`;
+        });
+    } catch (error) { console.error(error); }
+}
+
+
+// --- Modals ---
 function openModal(modalId) {
     document.getElementById(modalId).classList.add('active');
-    
-    // Fetch dependencies if necessary
     if(modalId === 'book-modal') {
-        fetchPublishersForSelect();
-        fetchCategoriesForSelect();
+        fetchPublishersForSelect(); fetchCategoriesForSelect();
     } else if(modalId === 'borrow-modal') {
-        fetchMembersForSelect();
-        fetchAvailableBooksForSelect();
-        fetchLibrariansForSelect();
+        fetchMembersForSelect(); fetchAvailableBooksForSelect(); fetchLibrariansForSelect();
     }
 }
 
@@ -188,194 +227,124 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
 }
 
-// Close modal when clicking outside
 window.onclick = function(event) {
-    if (event.target.classList.contains('modal-overlay')) {
-        event.target.classList.remove('active');
-    }
+    if (event.target.classList.contains('modal-overlay')) event.target.classList.remove('active');
 }
 
-// Fetch Publishers for Add Book Form
+// Select Populators
 async function fetchPublishersForSelect() {
     try {
         const res = await fetch(`${API_BASE_URL}/publishers`);
-        const publishers = await res.json();
+        const data = await res.json();
         const select = document.getElementById('book-publisher');
-        select.innerHTML = '<option value="">Select a Publisher...</option>';
-        publishers.forEach(pub => {
-            select.innerHTML += `<option value="${pub.pub_id}">${pub.pub_name}</option>`;
-        });
-    } catch (error) {
-        console.error("Error fetching publishers:", error);
-    }
+        select.innerHTML = '<option value="">Select...</option>';
+        data.forEach(pub => select.innerHTML += `<option value="${pub.pub_id}">${pub.pub_name}</option>`);
+    } catch (err) { console.error(err); }
 }
-
 async function fetchCategoriesForSelect() {
     try {
         const res = await fetch(`${API_BASE_URL}/categories`);
-        const categories = await res.json();
+        const data = await res.json();
         const select = document.getElementById('book-category');
-        select.innerHTML = '<option value="">Select a Category...</option>';
-        categories.forEach(cat => {
-            select.innerHTML += `<option value="${cat.category_id}">${cat.category_name}</option>`;
-        });
-    } catch (error) {
-        console.error("Error fetching categories:", error);
-    }
+        select.innerHTML = '<option value="">Select...</option>';
+        data.forEach(cat => select.innerHTML += `<option value="${cat.category_id}">${cat.category_name}</option>`);
+    } catch (err) { console.error(err); }
 }
-
-// Fetch Members for Add Borrow Form
 async function fetchMembersForSelect() {
     try {
         const res = await fetch(`${API_BASE_URL}/members`);
-        const members = await res.json();
+        const data = await res.json();
         const select = document.getElementById('borrow-member');
-        select.innerHTML = '<option value="">Select a Member...</option>';
-        members.forEach(member => {
-            select.innerHTML += `<option value="${member.memb_id}">${member.name}</option>`;
-        });
-    } catch (error) {
-        console.error("Error fetching members for select:", error);
-    }
+        select.innerHTML = '<option value="">Select...</option>';
+        data.forEach(m => select.innerHTML += `<option value="${m.memb_id}">${m.name}</option>`);
+    } catch (err) { console.error(err); }
 }
-
-// Fetch Available Books for Add Borrow Form
 async function fetchAvailableBooksForSelect() {
     try {
         const res = await fetch(`${API_BASE_URL}/books`);
-        const books = await res.json();
+        const data = await res.json();
         const select = document.getElementById('borrow-book');
-        select.innerHTML = '<option value="">Select a Book...</option>';
-        books.forEach(book => {
-            if(book.available_copies > 0) {
-                select.innerHTML += `<option value="${book.book_id}">${book.title} (by ${book.author})</option>`;
-            }
-        });
-    } catch (error) {
-        console.error("Error fetching books for select:", error);
-    }
+        select.innerHTML = '<option value="">Select...</option>';
+        data.forEach(b => { if(b.available_copies > 0) select.innerHTML += `<option value="${b.book_id}">${b.title}</option>`; });
+    } catch (err) { console.error(err); }
 }
-
-// Fetch Librarians for Add Borrow Form
 async function fetchLibrariansForSelect() {
     try {
         const res = await fetch(`${API_BASE_URL}/librarians`);
-        const librarians = await res.json();
+        const data = await res.json();
         const select = document.getElementById('borrow-librarian');
-        select.innerHTML = '<option value="">Select a Librarian...</option>';
-        librarians.forEach(lib => {
-            select.innerHTML += `<option value="${lib.librarian_id}">${lib.librarian_name}</option>`;
-        });
-    } catch (error) {
-        console.error("Error fetching librarians for select:", error);
-    }
+        select.innerHTML = '<option value="">Select...</option>';
+        data.forEach(l => select.innerHTML += `<option value="${l.librarian_id}">${l.librarian_name}</option>`);
+    } catch (err) { console.error(err); }
 }
 
-// Form Submit Handlers
-document.getElementById('add-book-form').addEventListener('submit', async (e) => {
+// --- Submit Handlers ---
+async function handleFormSubmit(e, endpoint, payload, modalId, refreshFunc) {
     e.preventDefault();
-    const payload = {
-        title: document.getElementById('book-title').value,
-        author: document.getElementById('book-author').value,
-        price: document.getElementById('book-price').value,
-        available_copies: document.getElementById('book-copies').value,
-        pub_id: document.getElementById('book-publisher').value,
-        category_id: document.getElementById('book-category').value
-    };
-
     try {
-        const res = await fetch(`${API_BASE_URL}/books`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+        const res = await fetch(`${API_BASE_URL}/${endpoint}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
         if(res.ok) {
-            closeModal('book-modal');
+            closeModal(modalId);
             e.target.reset();
-            fetchBooks();
-            fetchDashboardData();
+            refreshFunc();
         } else {
-            alert('Error adding book');
+            const data = await res.json();
+            alert('Error: ' + (data.error || 'Unknown error'));
         }
     } catch(err) { console.error(err); }
-});
+}
 
-document.getElementById('add-member-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-        name: document.getElementById('member-name').value,
-        email: document.getElementById('member-email').value,
-        address: document.getElementById('member-address').value,
-        memb_type: document.getElementById('member-type').value
-    };
+document.getElementById('add-book-form').addEventListener('submit', (e) => handleFormSubmit(e, 'books', {
+    title: document.getElementById('book-title').value, author: document.getElementById('book-author').value,
+    price: document.getElementById('book-price').value, available_copies: document.getElementById('book-copies').value,
+    pub_id: document.getElementById('book-publisher').value, category_id: document.getElementById('book-category').value
+}, 'book-modal', () => { fetchBooks(); fetchDashboardData(); }));
 
+document.getElementById('add-member-form').addEventListener('submit', (e) => handleFormSubmit(e, 'members', {
+    name: document.getElementById('member-name').value, email: document.getElementById('member-email').value,
+    address: document.getElementById('member-address').value, memb_type: document.getElementById('member-type').value
+}, 'member-modal', () => { fetchMembers(); fetchDashboardData(); }));
+
+document.getElementById('add-borrow-form').addEventListener('submit', (e) => handleFormSubmit(e, 'borrows', {
+    memb_id: document.getElementById('borrow-member').value, book_id: document.getElementById('borrow-book').value,
+    librarian_id: document.getElementById('borrow-librarian').value
+}, 'borrow-modal', () => { fetchBorrows(); fetchDashboardData(); }));
+
+document.getElementById('add-publisher-form').addEventListener('submit', (e) => handleFormSubmit(e, 'publishers', {
+    pub_name: document.getElementById('publisher-name').value, address: document.getElementById('publisher-address').value
+}, 'publisher-modal', fetchPublishersGrid));
+
+document.getElementById('add-category-form').addEventListener('submit', (e) => handleFormSubmit(e, 'categories', {
+    category_name: document.getElementById('category-name').value
+}, 'category-modal', fetchCategoriesGrid));
+
+document.getElementById('add-author-form').addEventListener('submit', (e) => handleFormSubmit(e, 'authors', {
+    author_name: document.getElementById('author-name').value, country: document.getElementById('author-country').value
+}, 'author-modal', fetchAuthorsGrid));
+
+document.getElementById('add-librarian-form').addEventListener('submit', (e) => handleFormSubmit(e, 'librarians', {
+    librarian_name: document.getElementById('librarian-name').value, email: document.getElementById('librarian-email').value,
+    phone: document.getElementById('librarian-phone').value
+}, 'librarian-modal', fetchLibrariansGrid));
+
+document.getElementById('add-fine-form').addEventListener('submit', (e) => handleFormSubmit(e, 'fines', {
+    borrow_id: document.getElementById('fine-borrow-id').value, amount: document.getElementById('fine-amount').value,
+    status: document.getElementById('fine-status').value
+}, 'fine-modal', fetchFinesGrid));
+
+// --- Action Functions ---
+async function deleteRecord(endpoint, id, refreshFunc) {
+    if(!confirm("Are you sure you want to delete this?")) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/members`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const res = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, { method: 'DELETE' });
         if(res.ok) {
-            closeModal('member-modal');
-            e.target.reset();
-            fetchMembers();
-            fetchDashboardData();
-        } else {
-            alert('Error adding member');
-        }
-    } catch(err) { console.error(err); }
-});
-
-document.getElementById('add-borrow-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-        memb_id: document.getElementById('borrow-member').value,
-        book_id: document.getElementById('borrow-book').value,
-        librarian_id: document.getElementById('borrow-librarian').value
-    };
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/borrows`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if(res.ok) {
-            closeModal('borrow-modal');
-            e.target.reset();
-            fetchBorrows();
-            fetchDashboardData();
-        } else {
-            alert('Error adding borrowing. Please ensure inputs are correct.');
-        }
-    } catch(err) { console.error(err); }
-});
-
-
-// Action Functions
-async function deleteBook(id) {
-    if(!confirm("Are you sure you want to delete this book?")) return;
-    try {
-        const res = await fetch(`${API_BASE_URL}/books/${id}`, { method: 'DELETE' });
-        if(res.ok) {
-            fetchBooks();
-            fetchDashboardData();
+            refreshFunc();
+            if(endpoint === 'books' || endpoint === 'members' || endpoint === 'borrows') fetchDashboardData();
         } else {
             const errData = await res.json();
-            alert(errData.error || 'Error deleting book');
-        }
-    } catch(err) { console.error(err); }
-}
-
-async function deleteMember(id) {
-    if(!confirm("Are you sure you want to delete this member? This will also delete their borrowing history.")) return;
-    try {
-        const res = await fetch(`${API_BASE_URL}/members/${id}`, { method: 'DELETE' });
-        if(res.ok) {
-            fetchMembers();
-            fetchDashboardData();
-        } else {
-            alert('Error deleting member');
+            alert('Error deleting: ' + (errData.error || 'Foreign Key Constraint'));
         }
     } catch(err) { console.error(err); }
 }
@@ -384,19 +353,10 @@ async function returnBook(borrowId, bookId) {
     if(!confirm("Mark this book as returned?")) return;
     try {
         const res = await fetch(`${API_BASE_URL}/borrows/${borrowId}/return`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ book_id: bookId })
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ book_id: bookId })
         });
         if(res.ok) {
-            fetchBorrows();
-            fetchDashboardData();
-            // Optional: refresh books to show availability
-            if(document.getElementById('books').classList.contains('active')) {
-                fetchBooks();
-            }
-        } else {
-            alert('Error updating borrowing record');
-        }
+            fetchBorrows(); fetchDashboardData();
+        } else { alert('Error updating borrowing record'); }
     } catch(err) { console.error(err); }
 }
