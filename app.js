@@ -45,7 +45,7 @@ async function fetchDashboardData() {
         document.getElementById('total-books').textContent = books.length || 0;
         document.getElementById('total-members').textContent = members.length || 0;
         
-        const activeBorrows = borrows.filter(b => b.Return_date === null).length;
+        const activeBorrows = borrows.filter(b => b.return_date === null).length;
         document.getElementById('active-borrows').textContent = activeBorrows || 0;
 
     } catch (error) {
@@ -62,17 +62,19 @@ async function fetchBooks() {
         tbody.innerHTML = '';
 
         books.forEach(book => {
-            const statusClass = book.Available ? 'available' : 'borrowed';
-            const statusText = book.Available ? 'Available' : 'Borrowed';
+            const isAvailable = book.available_copies > 0;
+            const statusClass = isAvailable ? 'available' : 'borrowed';
+            const statusText = isAvailable ? 'Available' : 'Out of Stock';
             
             tbody.innerHTML += `
                 <tr>
-                    <td>#${book.Book_id}</td>
-                    <td><strong>${book.Title}</strong></td>
-                    <td>${book.Author}</td>
-                    <td>${book.Publisher}</td>
-                    <td><span class="status ${statusClass}">${statusText}</span></td>
-                    <td><button class="btn-danger" style="padding: 0.3rem 0.6rem;" onclick="deleteBook(${book.Book_id})">Delete</button></td>
+                    <td>#${book.book_id}</td>
+                    <td><strong>${book.title}</strong></td>
+                    <td>${book.author}</td>
+                    <td>${book.category || 'N/A'}</td>
+                    <td>${book.available_copies}</td>
+                    <td>${book.publisher}</td>
+                    <td><button class="btn-danger" style="padding: 0.3rem 0.6rem;" onclick="deleteBook(${book.book_id})">Delete</button></td>
                 </tr>
             `;
         });
@@ -92,11 +94,11 @@ async function fetchMembers() {
         members.forEach(member => {
             tbody.innerHTML += `
                 <tr>
-                    <td>#${member.Memb_id}</td>
-                    <td><strong>${member.Name}</strong></td>
-                    <td>${member.Memb_type}</td>
-                    <td>${member.Email || 'N/A'}</td>
-                    <td><button class="btn-danger" style="padding: 0.3rem 0.6rem;" onclick="deleteMember(${member.Memb_id})">Delete</button></td>
+                    <td>#${member.memb_id}</td>
+                    <td><strong>${member.name}</strong></td>
+                    <td>${member.memb_type}</td>
+                    <td>${member.email || 'N/A'}</td>
+                    <td><button class="btn-danger" style="padding: 0.3rem 0.6rem;" onclick="deleteMember(${member.memb_id})">Delete</button></td>
                 </tr>
             `;
         });
@@ -114,18 +116,20 @@ async function fetchBorrows() {
         tbody.innerHTML = '';
 
         borrows.forEach(borrow => {
-            const statusClass = borrow.Return_date ? 'available' : 'borrowed';
-            const statusText = borrow.Return_date ? 'Returned' : 'Active';
+            const isReturned = borrow.return_date !== null;
+            const statusClass = isReturned ? 'available' : 'borrowed';
+            const statusText = isReturned ? 'Returned' : 'Active';
 
             tbody.innerHTML += `
                 <tr>
-                    <td>#${borrow.Borrow_id}</td>
-                    <td>${borrow.Member_Name}</td>
-                    <td><strong>${borrow.Book_Title}</strong></td>
-                    <td>${formatDate(borrow.Issue_date)}</td>
+                    <td>#${borrow.borrow_id}</td>
+                    <td>${borrow.member_name}</td>
+                    <td><strong>${borrow.book_title}</strong></td>
+                    <td>${formatDate(borrow.issue_date)}</td>
+                    <td>${borrow.librarian_name || 'N/A'}</td>
                     <td><span class="status ${statusClass}">${statusText}</span></td>
                     <td>
-                        ${borrow.Return_date ? '<span style="color:var(--text-secondary)">-</span>' : `<button class="btn-success" style="padding: 0.3rem 0.6rem;" onclick="returnBook(${borrow.Borrow_id}, ${borrow.Book_id})">Mark Returned</button>`}
+                        ${isReturned ? '<span style="color:var(--text-secondary)">-</span>' : `<button class="btn-success" style="padding: 0.3rem 0.6rem;" onclick="returnBook(${borrow.borrow_id}, ${borrow.book_id})">Mark Returned</button>`}
                     </td>
                 </tr>
             `;
@@ -172,9 +176,11 @@ function openModal(modalId) {
     // Fetch dependencies if necessary
     if(modalId === 'book-modal') {
         fetchPublishersForSelect();
+        fetchCategoriesForSelect();
     } else if(modalId === 'borrow-modal') {
         fetchMembersForSelect();
         fetchAvailableBooksForSelect();
+        fetchLibrariansForSelect();
     }
 }
 
@@ -197,10 +203,24 @@ async function fetchPublishersForSelect() {
         const select = document.getElementById('book-publisher');
         select.innerHTML = '<option value="">Select a Publisher...</option>';
         publishers.forEach(pub => {
-            select.innerHTML += `<option value="${pub.Pub_ID}">${pub.Name}</option>`;
+            select.innerHTML += `<option value="${pub.pub_id}">${pub.pub_name}</option>`;
         });
     } catch (error) {
         console.error("Error fetching publishers:", error);
+    }
+}
+
+async function fetchCategoriesForSelect() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/categories`);
+        const categories = await res.json();
+        const select = document.getElementById('book-category');
+        select.innerHTML = '<option value="">Select a Category...</option>';
+        categories.forEach(cat => {
+            select.innerHTML += `<option value="${cat.category_id}">${cat.category_name}</option>`;
+        });
+    } catch (error) {
+        console.error("Error fetching categories:", error);
     }
 }
 
@@ -212,7 +232,7 @@ async function fetchMembersForSelect() {
         const select = document.getElementById('borrow-member');
         select.innerHTML = '<option value="">Select a Member...</option>';
         members.forEach(member => {
-            select.innerHTML += `<option value="${member.Memb_id}">${member.Name}</option>`;
+            select.innerHTML += `<option value="${member.memb_id}">${member.name}</option>`;
         });
     } catch (error) {
         console.error("Error fetching members for select:", error);
@@ -227,8 +247,8 @@ async function fetchAvailableBooksForSelect() {
         const select = document.getElementById('borrow-book');
         select.innerHTML = '<option value="">Select a Book...</option>';
         books.forEach(book => {
-            if(book.Available) {
-                select.innerHTML += `<option value="${book.Book_id}">${book.Title} (by ${book.Author})</option>`;
+            if(book.available_copies > 0) {
+                select.innerHTML += `<option value="${book.book_id}">${book.title} (by ${book.author})</option>`;
             }
         });
     } catch (error) {
@@ -236,14 +256,31 @@ async function fetchAvailableBooksForSelect() {
     }
 }
 
+// Fetch Librarians for Add Borrow Form
+async function fetchLibrariansForSelect() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/librarians`);
+        const librarians = await res.json();
+        const select = document.getElementById('borrow-librarian');
+        select.innerHTML = '<option value="">Select a Librarian...</option>';
+        librarians.forEach(lib => {
+            select.innerHTML += `<option value="${lib.librarian_id}">${lib.librarian_name}</option>`;
+        });
+    } catch (error) {
+        console.error("Error fetching librarians for select:", error);
+    }
+}
+
 // Form Submit Handlers
 document.getElementById('add-book-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
-        Title: document.getElementById('book-title').value,
-        Author: document.getElementById('book-author').value,
-        Price: document.getElementById('book-price').value,
-        Pub_ID: document.getElementById('book-publisher').value
+        title: document.getElementById('book-title').value,
+        author: document.getElementById('book-author').value,
+        price: document.getElementById('book-price').value,
+        available_copies: document.getElementById('book-copies').value,
+        pub_id: document.getElementById('book-publisher').value,
+        category_id: document.getElementById('book-category').value
     };
 
     try {
@@ -266,10 +303,10 @@ document.getElementById('add-book-form').addEventListener('submit', async (e) =>
 document.getElementById('add-member-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
-        Name: document.getElementById('member-name').value,
-        Email: document.getElementById('member-email').value,
-        Address: document.getElementById('member-address').value,
-        Memb_type: document.getElementById('member-type').value
+        name: document.getElementById('member-name').value,
+        email: document.getElementById('member-email').value,
+        address: document.getElementById('member-address').value,
+        memb_type: document.getElementById('member-type').value
     };
 
     try {
@@ -292,8 +329,9 @@ document.getElementById('add-member-form').addEventListener('submit', async (e) 
 document.getElementById('add-borrow-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
-        Memb_id: document.getElementById('borrow-member').value,
-        Book_id: document.getElementById('borrow-book').value
+        memb_id: document.getElementById('borrow-member').value,
+        book_id: document.getElementById('borrow-book').value,
+        librarian_id: document.getElementById('borrow-librarian').value
     };
 
     try {
@@ -313,28 +351,6 @@ document.getElementById('add-borrow-form').addEventListener('submit', async (e) 
     } catch(err) { console.error(err); }
 });
 
-document.getElementById('add-publisher-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-        Name: document.getElementById('publisher-name').value,
-        Address: document.getElementById('publisher-address').value
-    };
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/publishers`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if(res.ok) {
-            closeModal('publisher-modal');
-            e.target.reset();
-            alert('Publisher added successfully!');
-        } else {
-            alert('Error adding publisher');
-        }
-    } catch(err) { console.error(err); }
-});
 
 // Action Functions
 async function deleteBook(id) {
@@ -370,7 +386,7 @@ async function returnBook(borrowId, bookId) {
         const res = await fetch(`${API_BASE_URL}/borrows/${borrowId}/return`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ Book_id: bookId })
+            body: JSON.stringify({ book_id: bookId })
         });
         if(res.ok) {
             fetchBorrows();
