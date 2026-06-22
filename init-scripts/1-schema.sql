@@ -28,6 +28,7 @@ CREATE TABLE Books (
 CREATE TABLE Member (
     memb_id INT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
+    email VARCHAR(100),
     address VARCHAR(200),
     memb_type VARCHAR(30),
     memb_date DATE,

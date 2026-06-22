@@ -159,15 +159,15 @@ app.post('/api/books', async (req, res) => {
 
 app.post('/api/members', async (req, res) => {
   try {
-      const { name, address, memb_type } = req.body;
+      const { name, email, address, memb_type } = req.body;
       const newId = await generateId('Member', 'memb_id');
       const memb_date = new Date().toISOString().split('T')[0];
       const expiry_date = new Date();
       expiry_date.setFullYear(expiry_date.getFullYear() + 1);
       const formattedExpiry = expiry_date.toISOString().split('T')[0];
 
-      const query = 'INSERT INTO Member (memb_id, name, address, memb_type, memb_date, expiry_date) VALUES (?, ?, ?, ?, ?, ?)';
-      db.query(query, [newId, name, address, memb_type, memb_date, formattedExpiry], (err) => {
+      const query = 'INSERT INTO Member (memb_id, name, email, address, memb_type, memb_date, expiry_date) VALUES (?, ?, ?, ?, ?, ?, ?)';
+      db.query(query, [newId, name, email, address, memb_type, memb_date, formattedExpiry], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: 'Member added successfully', id: newId });
       });
