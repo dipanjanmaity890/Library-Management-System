@@ -39,3 +39,27 @@ FROM Borrows b
 JOIN Member m ON b.Memb_id = m.Memb_id
 JOIN Books bk ON b.Book_id = bk.Book_id
 WHERE b.Return_date IS NULL;
+
+-- 3. Create Books Table
+CREATE TABLE Books (
+    Book_id INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(255) NOT NULL,
+    Price DECIMAL(10, 2),
+    Available BOOLEAN DEFAULT TRUE,
+    Author VARCHAR(100) NOT NULL,
+    Pub_ID INT NOT NULL,
+    FOREIGN KEY (Pub_ID) REFERENCES Publisher(Pub_ID) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- 4. Create Borrows Table (Junction Table)
+CREATE TABLE Borrows (
+    Borrow_id INT AUTO_INCREMENT PRIMARY KEY,
+    Memb_id INT NOT NULL,
+    Book_id INT NOT NULL,
+    Issue_date DATE NOT NULL,
+    Due_date DATE NOT NULL,
+    Return_date DATE,
+    FOREIGN KEY (Memb_id) REFERENCES Member(Memb_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (Book_id) REFERENCES Books(Book_id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
