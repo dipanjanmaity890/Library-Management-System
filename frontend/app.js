@@ -221,7 +221,7 @@ async function fetchFinesGrid() {
 function openModal(modalId) {
     document.getElementById(modalId).classList.add('active');
     if(modalId === 'book-modal') {
-        fetchPublishersForSelect(); fetchCategoriesForSelect(); fetchAuthorsForSelect();
+        fetchPublishersForSelect(); fetchCategoriesForSelect();
     } else if(modalId === 'borrow-modal') {
         fetchMembersForSelect(); fetchAvailableBooksForSelect(); fetchLibrariansForSelect();
     } else if(modalId === 'fine-modal') {
@@ -321,7 +321,7 @@ async function handleFormSubmit(e, endpoint, payload, modalId, refreshFunc) {
 }
 
 document.getElementById('add-book-form').addEventListener('submit', (e) => handleFormSubmit(e, 'books', {
-    title: document.getElementById('book-title').value, author_id: document.getElementById('book-author').value,
+    title: document.getElementById('book-title').value, author: document.getElementById('book-author').value,
     price: document.getElementById('book-price').value, available_copies: document.getElementById('book-copies').value,
     pub_id: document.getElementById('book-publisher').value, category_id: document.getElementById('book-category').value
 }, 'book-modal', () => { fetchBooks(); fetchDashboardData(); }));
