@@ -1,68 +1,117 @@
--- schema.sql
+-- 1-schema.sql
 -- Database creation and table definitions for Library Management System
--- Database Design based on ER Diagram
+-- Schema provided by team (Kiran, Surya, Nikhil, Dipanjan, Anushka)
 
-CREATE DATABASE IF NOT EXISTS LibraryManagementSystem;
-USE LibraryManagementSystem;
+CREATE DATABASE IF NOT EXISTS library_management_system;
+USE library_management_system;
 
--- 1. Create Publisher Table
+-- //kiran
 CREATE TABLE Publisher (
-    Pub_ID INT AUTO_INCREMENT PRIMARY KEY,
-    Name VARCHAR(100) NOT NULL,
-    Address VARCHAR(255)
+    pub_id INT PRIMARY KEY,
+    pub_name VARCHAR(100) NOT NULL,
+    address VARCHAR(200)
 );
 
--- 2. Create Member Table
-CREATE TABLE Member (
-    Memb_id INT AUTO_INCREMENT PRIMARY KEY,
-    Name VARCHAR(100) NOT NULL,
-    Address VARCHAR(255),
-    Memb_type VARCHAR(50) NOT NULL,
-    Memb_date DATE NOT NULL,
-    Expiry_date DATE NOT NULL
-);
-
--- 3. Create Books Table
 CREATE TABLE Books (
-    Book_id INT AUTO_INCREMENT PRIMARY KEY,
-    Title VARCHAR(255) NOT NULL,
-    Price DECIMAL(10, 2),
-    Available BOOLEAN DEFAULT TRUE,
-    Author VARCHAR(100) NOT NULL,
-    Pub_ID INT NOT NULL,
-    FOREIGN KEY (Pub_ID) REFERENCES Publisher(Pub_ID) ON DELETE RESTRICT ON UPDATE CASCADE
+    book_id INT PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    author VARCHAR(100) NOT NULL,
+    price DECIMAL(8,2),
+    available_copies INT,
+    pub_id INT,
+
+    FOREIGN KEY (pub_id)
+    REFERENCES Publisher(pub_id)
 );
 
--- 4. Create Borrows Table (Junction Table)
+-- //surya
+CREATE TABLE Member (
+    memb_id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    memb_type VARCHAR(30),
+    memb_date DATE,
+    expiry_date DATE
+);
+
 CREATE TABLE Borrows (
-    Borrow_id INT AUTO_INCREMENT PRIMARY KEY,
-    Memb_id INT NOT NULL,
-    Book_id INT NOT NULL,
-    Issue_date DATE NOT NULL,
-    Due_date DATE NOT NULL,
-    Return_date DATE,
-    FOREIGN KEY (Memb_id) REFERENCES Member(Memb_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (Book_id) REFERENCES Books(Book_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    borrow_id INT PRIMARY KEY AUTO_INCREMENT,
+
+    memb_id INT,
+    book_id INT,
+
+    issue_date DATE,
+    due_date DATE,
+    return_date DATE,
+
+    FOREIGN KEY (memb_id)
+    REFERENCES Member(memb_id),
+
+    FOREIGN KEY (book_id)
+    REFERENCES Books(book_id)
 );
 
--- ALTER operations (Demonstrating ALTER as required)
--- Let's add an email constraint or similar to the Member table.
-ALTER TABLE Member ADD COLUMN Email VARCHAR(100) UNIQUE;
+-- //nikhil
+CREATE TABLE Category (
+    category_id INT PRIMARY KEY,
+    category_name VARCHAR(100) NOT NULL UNIQUE
+);
 
--- Create Indexes to optimize queries
-CREATE INDEX idx_books_title ON Books(Title);
-CREATE INDEX idx_borrows_memb_id ON Borrows(Memb_id);
-CREATE INDEX idx_borrows_book_id ON Borrows(Book_id);
+CREATE TABLE Author (
+    author_id INT PRIMARY KEY,
+    author_name VARCHAR(100) NOT NULL,
+    country VARCHAR(50)
+);
 
--- Create a View for Active Borrowings (Books currently borrowed and not returned)
-CREATE VIEW Active_Borrowings AS
-SELECT 
-    b.Borrow_id, 
-    m.Name AS Member_Name, 
-    bk.Title AS Book_Title, 
-    b.Issue_date, 
-    b.Due_date 
-FROM Borrows b
-JOIN Member m ON b.Memb_id = m.Memb_id
-JOIN Books bk ON b.Book_id = bk.Book_id
-WHERE b.Return_date IS NULL;
+-- //dipanjan
+CREATE TABLE Book_Author (
+    book_id INT,
+    author_id INT,
+
+    PRIMARY KEY (book_id, author_id),
+
+    FOREIGN KEY (book_id)
+        REFERENCES Books(book_id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (author_id)
+        REFERENCES Author(author_id)
+        ON DELETE CASCADE
+);
+
+ALTER TABLE Books
+ADD COLUMN category_id INT;
+
+ALTER TABLE Books
+ADD CONSTRAINT fk_book_category
+FOREIGN KEY (category_id)
+REFERENCES Category(category_id);
+
+
+-- // anushka
+CREATE TABLE Librarian (
+    librarian_id INT PRIMARY KEY,
+    librarian_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    phone VARCHAR(15)
+);
+
+ALTER TABLE Borrows
+ADD COLUMN librarian_id INT;
+
+ALTER TABLE Borrows
+ADD CONSTRAINT fk_borrow_librarian
+FOREIGN KEY (librarian_id)
+REFERENCES Librarian(librarian_id);
+
+CREATE TABLE Fine (
+    fine_id INT PRIMARY KEY,
+    borrow_id INT NOT NULL,
+    amount DECIMAL(8,2) NOT NULL,
+    status VARCHAR(20),
+
+    FOREIGN KEY (borrow_id)
+        REFERENCES Borrows(borrow_id)
+);
+
+SHOW TABLES;
