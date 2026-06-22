@@ -86,21 +86,28 @@ app.get('/api/borrows', (req, res) => {
 
 // Dropdown Endpoints
 app.get('/api/publishers', (req, res) => {
-  db.query('SELECT pub_id, pub_name FROM Publisher', (err, results) => {
+  db.query('SELECT * FROM Publisher', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
 
 app.get('/api/categories', (req, res) => {
-  db.query('SELECT category_id, category_name FROM Category', (err, results) => {
+  db.query('SELECT * FROM Category', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
 
 app.get('/api/librarians', (req, res) => {
-  db.query('SELECT librarian_id, librarian_name FROM Librarian', (err, results) => {
+  db.query('SELECT * FROM Librarian', (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+app.get('/api/authors', (req, res) => {
+  db.query('SELECT * FROM Author', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
@@ -197,6 +204,96 @@ app.delete('/api/members/:id', (req, res) => {
   db.query(query, [id], (err) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ message: 'Member deleted successfully' });
+  });
+});
+
+// Publishers CRUD
+app.post('/api/publishers', async (req, res) => {
+  try {
+      const { pub_name, address } = req.body;
+      const newId = await generateId('Publisher', 'pub_id');
+      db.query('INSERT INTO Publisher (pub_id, pub_name, address) VALUES (?, ?, ?)', [newId, pub_name, address], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Publisher added successfully' });
+      });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.delete('/api/publishers/:id', (req, res) => {
+  db.query('DELETE FROM Publisher WHERE pub_id = ?', [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Publisher deleted' });
+  });
+});
+
+// Categories CRUD
+app.post('/api/categories', async (req, res) => {
+  try {
+      const { category_name } = req.body;
+      const newId = await generateId('Category', 'category_id');
+      db.query('INSERT INTO Category (category_id, category_name) VALUES (?, ?)', [newId, category_name], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Category added successfully' });
+      });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.delete('/api/categories/:id', (req, res) => {
+  db.query('DELETE FROM Category WHERE category_id = ?', [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Category deleted' });
+  });
+});
+
+// Authors CRUD
+app.post('/api/authors', async (req, res) => {
+  try {
+      const { author_name, country } = req.body;
+      const newId = await generateId('Author', 'author_id');
+      db.query('INSERT INTO Author (author_id, author_name, country) VALUES (?, ?, ?)', [newId, author_name, country], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Author added successfully' });
+      });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.delete('/api/authors/:id', (req, res) => {
+  db.query('DELETE FROM Author WHERE author_id = ?', [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Author deleted' });
+  });
+});
+
+// Librarians CRUD
+app.post('/api/librarians', async (req, res) => {
+  try {
+      const { librarian_name, email, phone } = req.body;
+      const newId = await generateId('Librarian', 'librarian_id');
+      db.query('INSERT INTO Librarian (librarian_id, librarian_name, email, phone) VALUES (?, ?, ?, ?)', [newId, librarian_name, email, phone], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Librarian added successfully' });
+      });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.delete('/api/librarians/:id', (req, res) => {
+  db.query('DELETE FROM Librarian WHERE librarian_id = ?', [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Librarian deleted' });
+  });
+});
+
+// Fines CRUD
+app.post('/api/fines', async (req, res) => {
+  try {
+      const { borrow_id, amount, status } = req.body;
+      const newId = await generateId('Fine', 'fine_id');
+      db.query('INSERT INTO Fine (fine_id, borrow_id, amount, status) VALUES (?, ?, ?, ?)', [newId, borrow_id, amount, status], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Fine added successfully' });
+      });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.delete('/api/fines/:id', (req, res) => {
+  db.query('DELETE FROM Fine WHERE fine_id = ?', [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Fine deleted' });
   });
 });
 
