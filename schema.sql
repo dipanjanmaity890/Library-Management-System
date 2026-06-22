@@ -1,4 +1,22 @@
+CREATE DATABASE IF NOT EXISTS LibraryManagementSystem;
+USE LibraryManagementSystem;
 
+-- 1. Create Publisher Table
+CREATE TABLE Publisher (
+    Pub_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    Address VARCHAR(255)
+);
+
+-- 2. Create Member Table
+CREATE TABLE Member (
+    Memb_id INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    Address VARCHAR(255),
+    Memb_type VARCHAR(50) NOT NULL,
+    Memb_date DATE NOT NULL,
+    Expiry_date DATE NOT NULL
+);
 
 -- ALTER operations (Demonstrating ALTER as required)
 -- Let's add an email constraint or similar to the Member table.
