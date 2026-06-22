@@ -116,8 +116,12 @@ async function fetchBorrows() {
         tbody.innerHTML = '';
         borrows.forEach(borrow => {
             const isReturned = borrow.return_date !== null;
-            const statusClass = isReturned ? 'available' : 'borrowed';
-            const statusText = isReturned ? 'Returned' : 'Active';
+            let statusClass = isReturned ? 'available' : 'borrowed';
+            let statusText = isReturned ? 'Returned' : 'Active';
+            if (borrow.has_fine) {
+                statusClass = 'borrowed';
+                statusText = 'Fined';
+            }
             tbody.innerHTML += `
                 <tr>
                     <td>#${borrow.borrow_id}</td>
@@ -220,6 +224,8 @@ function openModal(modalId) {
         fetchPublishersForSelect(); fetchCategoriesForSelect(); fetchAuthorsForSelect();
     } else if(modalId === 'borrow-modal') {
         fetchMembersForSelect(); fetchAvailableBooksForSelect(); fetchLibrariansForSelect();
+    } else if(modalId === 'fine-modal') {
+        fetchBorrowsForFineSelect();
     }
 }
 
@@ -284,6 +290,15 @@ async function fetchLibrariansForSelect() {
         const select = document.getElementById('borrow-librarian');
         select.innerHTML = '<option value="">Select...</option>';
         data.forEach(l => select.innerHTML += `<option value="${l.librarian_id}">${l.librarian_name}</option>`);
+    } catch (err) { console.error(err); }
+}
+async function fetchBorrowsForFineSelect() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/borrows`);
+        const data = await res.json();
+        const select = document.getElementById('fine-borrow-id');
+        select.innerHTML = '<option value="">Select...</option>';
+        data.forEach(b => select.innerHTML += `<option value="${b.borrow_id}">Borrow #${b.borrow_id} - ${b.book_title} (${b.member_name})</option>`);
     } catch (err) { console.error(err); }
 }
 
