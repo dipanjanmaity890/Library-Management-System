@@ -1,7 +1,6 @@
 -- queries.sql
 -- Advanced SQL Query Demonstrations for Library Management System
 
--- DIPANJAN
 USE LibraryManagementSystem;
 
 -- 1. Basic JOIN Query: Get all books along with their publisher names
@@ -22,7 +21,6 @@ GROUP BY p.Pub_ID, p.Name;
 
 -- 3. Complex JOIN with filtering: Find all members who currently have a book overdue
 
--- SURYANJALI
 SELECT 
     m.Name, 
     m.Email, 
